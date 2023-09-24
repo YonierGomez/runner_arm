@@ -3,13 +3,13 @@ Runner - Agente github action basado en arm
 
 ## Referencia rápida
 
--	¿Qué es un Runner?
--	¿Cuál es nuestro uso?
--	¿Cómo usar esta imagen?
--	Arquitectura soportada
--	Variables
-- Volumenes
--	Te invito a visitar mi web
+-	**¿Qué es un Runner?**
+-	**¿Cuál es nuestro uso?**
+-	**¿Cómo usar esta imagen?**
+-	**Arquitectura soportada**
+-	**Variables**
+- **Volumenes**
+-	**Te invito a visitar mi web**
 
 ## ¿Qué es un runner?
 
