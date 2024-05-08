@@ -18,9 +18,9 @@ RUN apt-get update && apt-get upgrade -y && \
 RUN groupadd -g 999 docker && useradd -mU -d $runner_home_dir $runner_user && \ 
     mkdir -p $runner_home_dir/actions-runner && \
     cd $runner_home_dir/actions-runner && \
-    curl -o actions-runner-linux-arm64-2.309.0.tar.gz -L \
-    https://github.com/actions/runner/releases/download/v2.309.0/actions-runner-linux-arm64-2.309.0.tar.gz && \
-    tar xzf ./actions-runner-linux-arm64-2.309.0.tar.gz && \
+    curl -o actions-runner-linux-arm64-2.316.1.tar.gz -L \
+    https://github.com/actions/runner/releases/download/v2.316.1/actions-runner-linux-arm64-2.316.1.tar.gz && \
+    tar xzf ./actions-runner-linux-arm64-2.316.1.tar.gz && \
     chown -R $runner_user:$runner_user $runner_home_dir/actions-runner && \
     usermod -aG docker $runner_user && \
     ./bin/installdependencies.sh
@@ -36,6 +36,8 @@ RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - && \
 # Cambia al usuario "$runner_user" y establece el directorio de trabajo
 USER $runner_user
 WORKDIR $runner_home_dir/actions-runner
+
+# Cambiar los permisos del socket de Docker
 
 # CMD para iniciar el servicio de Docker dentro del contenedor
 CMD ./config.sh --url $runner_url \
