@@ -15,7 +15,7 @@ RUN apt-get update && apt-get upgrade -y && \
     apt-get clean
 
 # Crea usuario, asigna permisos, Descarga y configura el runner
-RUN groupadd -g 999 docker && useradd -mU -d $runner_home_dir $runner_user && \ 
+RUN groupadd docker && useradd -mU -d $runner_home_dir $runner_user && \
     mkdir -p $runner_home_dir/actions-runner && \
     cd $runner_home_dir/actions-runner && \
     curl -o actions-runner-linux-arm64-2.316.1.tar.gz -L \
@@ -38,7 +38,6 @@ USER $runner_user
 WORKDIR $runner_home_dir/actions-runner
 
 # Cambiar los permisos del socket de Docker
-
 # CMD para iniciar el servicio de Docker dentro del contenedor
 CMD ./config.sh --url $runner_url \
     --token $runner_token --name $runner_user --runnergroup default \
