@@ -41,6 +41,10 @@ jobs:
           VERSION=$(curl -sf "https://api.github.com/repos/actions/runner/releases/latest" \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" | \
             jq -r '.tag_name' | sed 's/^v//')
+          if [[ -z "$VERSION" || "$VERSION" == "null" ]]; then
+            echo "ERROR: could not fetch latest runner version from GitHub API"
+            exit 1
+          fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Latest runner version: $VERSION"
 
@@ -79,6 +83,15 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6.0.2
+
+      - name: Validate RUNNER_VERSION
+        run: |
+          VERSION="${{ needs.check-version.outputs.version }}"
+          if [[ -z "$VERSION" || "$VERSION" == "null" ]]; then
+            echo "ERROR: RUNNER_VERSION is empty — aborting build"
+            exit 1
+          fi
+          echo "Building runner version: $VERSION"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4.0.0
