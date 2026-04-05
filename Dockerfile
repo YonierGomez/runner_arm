@@ -3,6 +3,8 @@ FROM arm64v8/ubuntu:latest
 
 LABEL maintainer="Yonier Gómez"
 
+ARG RUNNER_VERSION
+
 ENV runner_token=AG7G5YNU4ULPQGRSSHI3HLLFCAAC6 \
     runner_user=runner \
     runner_home_dir=/home/runner \
@@ -18,9 +20,9 @@ RUN apt-get update && apt-get upgrade -y && \
 RUN groupadd docker && useradd -mU -d $runner_home_dir $runner_user && \
     mkdir -p $runner_home_dir/actions-runner && \
     cd $runner_home_dir/actions-runner && \
-    curl -o actions-runner-linux-arm64-2.319.1.tar.gz -L \
-    https://github.com/actions/runner/releases/download/v2.319.1/actions-runner-linux-arm64-2.319.1.tar.gz && \
-    tar xzf ./actions-runner-linux-arm64-2.319.1.tar.gz && \
+    curl -o actions-runner-linux-arm64-${RUNNER_VERSION}.tar.gz -L \
+    https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-arm64-${RUNNER_VERSION}.tar.gz && \
+    tar xzf ./actions-runner-linux-arm64-${RUNNER_VERSION}.tar.gz && \
     chown -R $runner_user:$runner_user $runner_home_dir/actions-runner && \
     usermod -aG docker $runner_user && \
     ./bin/installdependencies.sh

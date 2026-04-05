@@ -1,0 +1,159 @@
+name: Docker CI ARM - runner_arm
+
+on:
+  schedule:
+    - cron: '0 8 * * 1'  # Every Monday 08:00 UTC
+  workflow_dispatch:
+    inputs:
+      force_build:
+        description: 'Force build even if runner version unchanged'
+        required: false
+        type: choice
+        default: 'false'
+        options:
+          - 'true'
+          - 'false'
+      skip_release:
+        description: 'Build and push Docker image but skip GitHub Release creation'
+        required: false
+        type: choice
+        default: 'false'
+        options:
+          - 'true'
+          - 'false'
+
+permissions:
+  contents: write
+
+jobs:
+
+  # ── Phase 1: detect whether a new runner version is available ────────────────
+  check-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.runner_version.outputs.version }}
+      should_build: ${{ steps.compare.outputs.should_build }}
+
+    steps:
+      - name: Get latest actions/runner version
+        id: runner_version
+        run: |
+          VERSION=$(curl -sf "https://api.github.com/repos/actions/runner/releases/latest" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" | \
+            jq -r '.tag_name' | sed 's/^v//')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Latest runner version: $VERSION"
+
+      - name: Get latest GitHub release tag
+        id: get_release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          LATEST=$(gh release list \
+            --repo ${{ github.repository }} \
+            --limit 1 \
+            --json tagName \
+            --jq '.[0].tagName // ""')
+          echo "latest=$LATEST" >> "$GITHUB_OUTPUT"
+          echo "Latest release: $LATEST"
+
+      - name: Decide whether to build
+        id: compare
+        run: |
+          CURRENT="v${{ steps.runner_version.outputs.version }}"
+          LATEST="${{ steps.get_release.outputs.latest }}"
+          FORCE="${{ github.event.inputs.force_build }}"
+          if [[ "$CURRENT" != "$LATEST" || "$FORCE" == "true" ]]; then
+            echo "should_build=true"  >> "$GITHUB_OUTPUT"
+            echo "Build needed: current=$CURRENT, latest_release=$LATEST, force=$FORCE"
+          else
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+            echo "No new version — skipping build."
+          fi
+
+  # ── Phase 2: build and push image on native ARM64 runner ────────────────────
+  build-and-push:
+    needs: check-version
+    if: needs.check-version.outputs.should_build == 'true'
+    runs-on: ubuntu-24.04-arm
+
+    steps:
+      - uses: actions/checkout@v6.0.2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4.0.0
+
+      - name: Docker Login
+        uses: docker/login-action@v4.0.0
+        with:
+          username: ${{ secrets.USER_HUB }}
+          password: ${{ secrets.PASS_HUB }}
+
+      - name: Build and push (linux/arm64)
+        uses: docker/build-push-action@v7.0.0
+        with:
+          context: .
+          platforms: linux/arm64
+          push: true
+          build-args: |
+            RUNNER_VERSION=${{ needs.check-version.outputs.version }}
+          tags: |
+            neytor/runner_arm:latest
+            neytor/runner_arm:${{ needs.check-version.outputs.version }}
+
+  # ── Phase 3: GitHub Release ──────────────────────────────────────────────────
+  release:
+    needs: [check-version, build-and-push]
+    if: needs.check-version.outputs.should_build == 'true' && github.event.inputs.skip_release != 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check if release already exists
+        id: check_release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          EXISTS=$(gh release view "v${{ needs.check-version.outputs.version }}" \
+            --repo ${{ github.repository }} 2>/dev/null && echo "true" || echo "false")
+          echo "exists=$EXISTS" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        if: steps.check_release.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="v${{ needs.check-version.outputs.version }}"
+          VERSION="${{ needs.check-version.outputs.version }}"
+
+          cat > /tmp/release-notes.md << NOTES
+          ## Actions Runner ${VERSION} — linux/arm64
+
+          ### Docker Images
+
+          \`\`\`bash
+          docker pull neytor/runner_arm:latest
+          docker pull neytor/runner_arm:${VERSION}
+          \`\`\`
+
+          ### Supported Architectures
+
+          | Architecture | Tag |
+          |---|---|
+          | linux/arm64 | \`latest\`, \`${VERSION}\` |
+
+          ### Quick Start
+
+          \`\`\`bash
+          docker run -d --name runner \\
+            -e runner_token=<TOKEN> \\
+            -e runner_url=<ORG_URL> \\
+            neytor/runner_arm:latest
+          \`\`\`
+
+          > [Release notes oficiales](https://github.com/actions/runner/releases/tag/v${VERSION})
+          NOTES
+
+          gh release create "$TAG" \
+            --repo ${{ github.repository }} \
+            --title "Actions Runner $VERSION" \
+            --notes-file /tmp/release-notes.md
