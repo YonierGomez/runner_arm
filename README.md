@@ -1,43 +1,36 @@
-Runner - Agente github action basado en arm
-======================
+runner_arm — Self-hosted GitHub Actions Runner for ARM64
+==========================================================
 
-## Referencia rápida
+## Quick Reference
 
--	**¿Qué es un Runner?**
--	**¿Cuál es nuestro uso?**
--	**¿Cómo usar esta imagen?**
--	**Arquitectura soportada**
--	**Variables**
-- **Volumenes**
--	**Te invito a visitar mi web**
+- **What is a Runner?**
+- **What do we use it for?**
+- **How to use this image?**
+- **Supported architecture**
+- **Environment variables**
+- **Volumes**
 
-## ¿Qué es un runner?
+## What is a Runner?
 
-### Definición de GiHub
+### GitHub's definition
 
-Los Runner son las máquinas que ejecutan trabajos (jobs) en un flujo de trabajo de Acciones de GitHub (GitHub Actions workflow). Por ejemplo, un ejecutor puede clonar tu repositorio localmente, instalar software de pruebas y, a continuación, ejecutar comandos que evalúen tu código.
+Runners are the machines that execute jobs in a GitHub Actions workflow. For example, a runner can clone your repository locally, install testing software, and then run commands that evaluate your code.
 
-
-
-> [GitHub Action Doc](https://docs.github.com/es/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners)
+> [GitHub Actions Docs](https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners)
 
 ![runner](https://docs.github.com/assets/cb-72692/mw-1440/images/help/actions/overview-github-hosted-runner.webp)
 
-## ¿Cuál es nuestro uso?
+## What do we use it for?
 
-Crear runners basados en arquitecturas ARM como en una raspberry, orange pi, mac con arquitecturas arm, graviton, etc.
+Running self-hosted GitHub Actions runners on ARM-based hardware: Raspberry Pi, Orange Pi, Apple Silicon Macs, AWS Graviton instances, and any other ARM64 device.
 
-![Polymart Downloads](https://img.shields.io/polymart/downloads/323)
+The image is automatically rebuilt every Monday to track the latest `actions/runner` release.
 
-## ¿Cómo usar esta imagen?
+## How to use this image?
 
-Puede hacer uso de docker cli o docker compose para crear sus contenedores basados en esta imagen.
+You can use Docker CLI or Docker Compose to create containers based on this image.
 
-### Login por defecto
-
-Para acceder a su recurso compartido siga la sintaxis descrita en la tabla:
-
-### docker-compose (recomendado)
+### docker-compose (recommended)
 
 ```yaml
 ---
@@ -45,57 +38,52 @@ version: '3'
 services:
   runner_arm:
     image: neytor/runner_arm
-    container_name: runnger_arm_container
+    container_name: runner_arm_container
     restart: always
     environment:
-    	- runner_user=runner #OPCIONAL
-    	- runner_token=SDJFDFYVEJHSD #OPCIONAL
-    	- runner_url=https://github.com/YonierGomez/docker-cat-container #OPCIONAL
-    	- runner_home_dir=/home/runner #OPCIONAL
+      - runner_user=runner          # optional
+      - runner_token=YOUR_TOKEN     # required
+      - runner_url=https://github.com/YOUR_ORG_OR_REPO  # required
+      - runner_home_dir=/home/runner  # optional
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-    privileged:  true
-...
+    privileged: true
 ```
 
-> Nota: Puedes reemplazar environment por env_file y pasarle un archivo .env como valor, recuerde que el archivo .env debe tener las variables deseadas.
+> **Tip:** You can replace `environment` with `env_file` and point to a `.env` file.
 
 ### docker cli
 
 ```bash
 docker container run \
-   --name runner -v /var/run/docker.sock:/var/run/docker.sock \
+   --name runner \
+   -v /var/run/docker.sock:/var/run/docker.sock \
    -e runner_url=https://github.com/YonierGomez/runner_github \
-   -e runner_token=AG7G5YPBONZOYXLPRRQCX53FCCB7W --privileged \
+   -e runner_token=YOUR_TOKEN \
+   --privileged \
    -d neytor/runner_arm
 ```
 
-## Arquitectura soportada
+## Supported Architecture
 
-La arquitectura soportada es la siguiente:
+| Architecture | Available | Pull command |
+| ------------ | --------- | ------------ |
+| linux/arm64  | ✅        | `docker pull neytor/runner_arm` |
 
-| Arquitectura | Disponible | Tag descarga                 |
-| ------------ | ---------- | ---------------------------- |
-| arm64        | ✅          | docker pull neytor/runner_arm
+## Environment Variables
 
-## Variables
+| Variable | Required | Default | Description |
+| -------- | -------- | ------- | ----------- |
+| `runner_user` | No | `runner` | OS user that runs the agent |
+| `runner_token` | **Yes** | — | Token from `Settings → Actions → Runners → New self-hosted runner` (Configure section) |
+| `runner_url` | **Yes** | — | URL of your org or repository, e.g. `https://github.com/YonierGomez/my-repo` |
+| `runner_home_dir` | No | `/home/runner` | Home directory for the runner user |
 
-Puedes pasar las siguientes variables al crear el contenedor
+## Volumes
 
-| Variable      | Función                                                      |
-| ------------- | ------------------------------------------------------------ |
-| `-e runner_user`     | Opcional: Define el usuario con el que se ejecutará el runner, por defecto `runner`         |
-| `-e runner_token` | Obligatorio: Es el token que generas en tu proyecto, `SETTING -> ACTIONS -> RUNNERS -> new self-hosted runner`. Lo puedes visualizar en el apartado de **configure** |
-| `-e runner_url`  | Obligatorio: La url de su proyecto, ej https://github.com/YonierGomez/runner_github |
-| `-e runner_dir`      | Opcional: Por defecto `/home/runner` |
-
-## Volumenes
-
-Puedes pasar las siguientes variables al crear el contenedor
-
-| Variable      | Función                                                      |
-| ------------- | ------------------------------------------------------------ |
-| `-v /var/run/docker.sock:/var/run/docker.sock`     | Solo es obligatorio si desea ejecutar tareas de Docker en su job.         |
+| Volume | Required | Description |
+| ------ | -------- | ----------- |
+| `-v /var/run/docker.sock:/var/run/docker.sock` | Only if you run Docker steps inside your jobs | Mounts the host Docker socket into the container |
 
 
 
