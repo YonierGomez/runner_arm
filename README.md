@@ -86,13 +86,5 @@ docker run -d \
 ## Source
 
 - **GitHub:** [YonierGomez/runner_arm](https://github.com/YonierGomez/runner_arm)
-- **Maintainer:** Yonier Gómez
-
-
-Se recomienda pasar la variable `runner_token`a través de un archivo.
-
-[![Try in PWD](https://github.com/play-with-docker/stacks/raw/cff22438cb4195ace27f9b15784bbb497047afa7/assets/images/button.png)](http://play-with-docker.com?stack=https://raw.githubusercontent.com/docker-library/docs/db214ae34137ab29c7574f5fbe01bc4eaea6da7e/wordpress/stack.yml)
-
-## Te invito a visitar mi web
-
-Puedes ver nuevos eventos en [https://www.yonier.com/](https://www.yonier.com)
+- **Maintainer:** Yonier Gómez — [yonier.com](https://www.yonier.com)
+- **Landing page:** [yoniergomez.github.io/runner_arm](https://yoniergomez.github.io/runner_arm/)
