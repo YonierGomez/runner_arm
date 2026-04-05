@@ -17,10 +17,11 @@ RUN apt-get update && apt-get upgrade -y && \
     apt-get clean
 
 # Crea usuario, asigna permisos, Descarga y configura el runner
-RUN groupadd docker && useradd -mU -d $runner_home_dir $runner_user && \
+RUN [ -n "${RUNNER_VERSION}" ] || { echo "ERROR: RUNNER_VERSION build-arg is required"; exit 1; } && \
+    groupadd -f docker && useradd -mU -d $runner_home_dir $runner_user && \
     mkdir -p $runner_home_dir/actions-runner && \
     cd $runner_home_dir/actions-runner && \
-    curl -o actions-runner-linux-arm64-${RUNNER_VERSION}.tar.gz -L \
+    curl -fL -o actions-runner-linux-arm64-${RUNNER_VERSION}.tar.gz \
     https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-arm64-${RUNNER_VERSION}.tar.gz && \
     tar xzf ./actions-runner-linux-arm64-${RUNNER_VERSION}.tar.gz && \
     chown -R $runner_user:$runner_user $runner_home_dir/actions-runner && \
