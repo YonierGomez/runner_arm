@@ -1,103 +1,93 @@
-runner_arm — Self-hosted GitHub Actions Runner for ARM64
-==========================================================
+# runner_arm
 
-## Quick Reference
+[![Docker Pulls](https://img.shields.io/docker/pulls/neytor/runner_arm)](https://hub.docker.com/r/neytor/runner_arm)
+[![Docker Image Size](https://img.shields.io/docker/image-size/neytor/runner_arm/latest)](https://hub.docker.com/r/neytor/runner_arm)
+[![Architecture](https://img.shields.io/badge/arch-linux%2Farm64-blue)](https://hub.docker.com/r/neytor/runner_arm)
+[![Auto-updated](https://img.shields.io/badge/updated-weekly-green)](https://github.com/YonierGomez/runner_arm/actions)
 
-- **What is a Runner?**
-- **What do we use it for?**
-- **How to use this image?**
-- **Supported architecture**
-- **Environment variables**
-- **Volumes**
+A self-hosted **GitHub Actions runner** packaged for **linux/arm64**. Runs natively on Raspberry Pi, Orange Pi, Apple Silicon, AWS Graviton, and any other ARM64 machine — no QEMU, no emulation.
 
-## What is a Runner?
+The image is rebuilt automatically every Monday to track the latest [`actions/runner`](https://github.com/actions/runner/releases) release.
 
-### GitHub's definition
+---
 
-Runners are the machines that execute jobs in a GitHub Actions workflow. For example, a runner can clone your repository locally, install testing software, and then run commands that evaluate your code.
+## Supported Architectures
 
-> [GitHub Actions Docs](https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners)
+| Architecture | Tag |
+|---|---|
+| `linux/arm64` | `latest`, `<version>` |
 
-![runner](https://docs.github.com/assets/cb-72692/mw-1440/images/help/actions/overview-github-hosted-runner.webp)
+---
 
-## What do we use it for?
-
-Running self-hosted GitHub Actions runners on ARM-based hardware: Raspberry Pi, Orange Pi, Apple Silicon Macs, AWS Graviton instances, and any other ARM64 device.
-
-The image is automatically rebuilt every Monday to track the latest `actions/runner` release.
-
-## How to use this image?
-
-You can use Docker CLI or Docker Compose to create containers based on this image.
+## Quick Start
 
 ### docker-compose (recommended)
 
 ```yaml
----
-version: '3'
 services:
   runner_arm:
-    image: neytor/runner_arm
-    container_name: runner_arm_container
+    image: neytor/runner_arm:latest
+    container_name: runner_arm
     restart: always
     environment:
-      - runner_user=runner          # optional
-      - runner_token=YOUR_TOKEN     # required
-      - runner_url=https://github.com/YOUR_ORG_OR_REPO  # required
-      - runner_home_dir=/home/runner  # optional
+      - runner_token=YOUR_TOKEN
+      - runner_url=https://github.com/YOUR_ORG_OR_REPO
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     privileged: true
 ```
 
-> **Tip:** You can replace `environment` with `env_file` and point to a `.env` file.
+> **Tip:** swap `environment` for `env_file` and point to a `.env` file to keep secrets out of compose files.
 
 ### docker cli
 
 ```bash
-docker container run \
-   --name runner \
-   -v /var/run/docker.sock:/var/run/docker.sock \
-   -e runner_url=https://github.com/YonierGomez/runner_github \
-   -e runner_token=YOUR_TOKEN \
-   --privileged \
-   -d neytor/runner_arm
+docker run -d \
+  --name runner_arm \
+  --privileged \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -e runner_token=YOUR_TOKEN \
+  -e runner_url=https://github.com/YOUR_ORG_OR_REPO \
+  neytor/runner_arm:latest
 ```
 
-## Supported Architecture
+---
 
-| Architecture | Available | Pull command |
-| ------------ | --------- | ------------ |
-| linux/arm64  | ✅        | `docker pull neytor/runner_arm` |
+## How to get the token
+
+1. Go to your repository or organization on GitHub.
+2. Navigate to **Settings → Actions → Runners → New self-hosted runner**.
+3. Select **Linux** and **ARM64**.
+4. Copy the token shown in the **Configure** section.
+
+---
 
 ## Environment Variables
 
 | Variable | Required | Default | Description |
-| -------- | -------- | ------- | ----------- |
-| `runner_user` | No | `runner` | OS user that runs the agent |
-| `runner_token` | **Yes** | — | Token from `Settings → Actions → Runners → New self-hosted runner` (Configure section) |
-| `runner_url` | **Yes** | — | URL of your org or repository, e.g. `https://github.com/YonierGomez/my-repo` |
+|---|---|---|---|
+| `runner_token` | ✅ Yes | — | Registration token generated in GitHub |
+| `runner_url` | ✅ Yes | — | URL of the target org or repository |
+| `runner_user` | No | `runner` | OS user that owns the runner process |
 | `runner_home_dir` | No | `/home/runner` | Home directory for the runner user |
+
+---
 
 ## Volumes
 
-| Volume | Required | Description |
-| ------ | -------- | ----------- |
-| `-v /var/run/docker.sock:/var/run/docker.sock` | Only if you run Docker steps inside your jobs | Mounts the host Docker socket into the container |
+| Mount | When needed |
+|---|---|
+| `/var/run/docker.sock:/var/run/docker.sock` | Only when your jobs need to run Docker commands |
 
+> Mount the socket and add `privileged: true` to give the runner access to the host Docker daemon.
 
+---
 
-#### Ejemplo completo
+## Source
 
-```bash
-docker container run \
-   --name runner -v /var/run/docker.sock:/var/run/docker.sock \
-   -e runner_url=https://github.com/YonierGomez/runner_github \
-   -e runner_token=AG7G5YPBONZOYXLPRRQCX53FCCB7W --privileged \
-   -d neytor/runner_arm
-```
+- **GitHub:** [YonierGomez/runner_arm](https://github.com/YonierGomez/runner_arm)
+- **Maintainer:** Yonier Gómez
 
-## Environment variables desde archivo (Docker secrets)
 
 Se recomienda pasar la variable `runner_token`a través de un archivo.
 
