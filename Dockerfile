@@ -1,47 +1,48 @@
-# Use una imagen Ubuntu para ARM64 como base
-FROM arm64v8/ubuntu:latest
+FROM alpine:latest
 
 LABEL maintainer="Yonier Gómez"
 
 ARG RUNNER_VERSION
 
-ENV runner_token=AG7G5YNU4ULPQGRSSHI3HLLFCAAC6 \
+ENV runner_token="" \
     runner_user=runner \
     runner_home_dir=/home/runner \
-    runner_url=https://github.com/YonierGomezOrganization
+    runner_url=https://github.com/YonierGomezOrganization \
+    # Suppress .NET diagnostics warning when lttng-ust is absent
+    COMPlus_EnableDiagnostics=0
 
-# Actualiza el sistema e instala las dependencias
-RUN apt-get update && apt-get upgrade -y && \
-    apt-get install -y \
-    curl lsb-release apt-transport-https ca-certificates software-properties-common && \
-    apt-get clean
+# gcompat     → glibc compatibility shim (runner binary is glibc-linked)
+# libgcc / libstdc++ → C++ runtime required by .NET (runner core)
+# icu-libs    → globalization support for .NET
+# krb5-libs   → Kerberos (used by some GitHub auth flows)
+# zlib        → compression
+# docker-cli  → allows jobs to run Docker commands
+RUN apk add --no-cache \
+    bash curl tar ca-certificates \
+    gcompat libgcc libstdc++ \
+    icu-libs krb5-libs zlib \
+    docker-cli
 
-# Crea usuario, asigna permisos, Descarga y configura el runner
+# Create docker group + unprivileged runner user
+# adduser without -G auto-creates a group with the same name (runner:runner)
+# then we add runner to docker as a supplementary group
+RUN addgroup docker && \
+    adduser -D -h "$runner_home_dir" -s /bin/bash "$runner_user" && \
+    adduser "$runner_user" docker
+
+# Download and extract the runner
 RUN [ -n "${RUNNER_VERSION}" ] || { echo "ERROR: RUNNER_VERSION build-arg is required"; exit 1; } && \
-    groupadd -f docker && useradd -mU -d $runner_home_dir $runner_user && \
-    mkdir -p $runner_home_dir/actions-runner && \
-    cd $runner_home_dir/actions-runner && \
-    curl -fL -o actions-runner-linux-arm64-${RUNNER_VERSION}.tar.gz \
-    https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-arm64-${RUNNER_VERSION}.tar.gz && \
-    tar xzf ./actions-runner-linux-arm64-${RUNNER_VERSION}.tar.gz && \
-    chown -R $runner_user:$runner_user $runner_home_dir/actions-runner && \
-    usermod -aG docker $runner_user && \
-    ./bin/installdependencies.sh
+    mkdir -p "$runner_home_dir/actions-runner" && \
+    cd "$runner_home_dir/actions-runner" && \
+    curl -fL -o runner.tar.gz \
+      "https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-arm64-${RUNNER_VERSION}.tar.gz" && \
+    tar xzf runner.tar.gz && \
+    rm runner.tar.gz && \
+    chown -R "$runner_user:$runner_user" "$runner_home_dir/actions-runner"
 
-# Agrega la clave GPG oficial de Docker, agrega el repositorio de Docker,
-# y luego instala Docker
-RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - && \
-    add-apt-repository "deb [arch=arm64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" && \
-    apt-get update && \
-    apt-get install -y docker-ce-cli && \
-    apt-get clean
-
-# Cambia al usuario "$runner_user" y establece el directorio de trabajo
 USER $runner_user
 WORKDIR $runner_home_dir/actions-runner
 
-# Cambiar los permisos del socket de Docker
-# CMD para iniciar el servicio de Docker dentro del contenedor
-CMD ./config.sh --url $runner_url \
-    --token $runner_token --name $runner_user --runnergroup default \
-    --labels 'self-hosted,Linux,ARM64' --work _work && ./run.sh && dockerd
+CMD ./config.sh --url "$runner_url" \
+    --token "$runner_token" --name "$runner_user" --runnergroup default \
+    --labels 'self-hosted,Linux,ARM64' --work _work && ./run.sh
