@@ -1,4 +1,4 @@
-name: Docker CI ARM - runner_arm
+name: Docker CI ARM64 - Alpine runner
 
 on:
   schedule:
